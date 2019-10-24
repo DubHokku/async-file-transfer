@@ -20,9 +20,10 @@ int sender_t::transfer()
         notify( "stat()", errno );
 
     std::cout << "size " << file_stat.st_size << " byte" << std::endl;    
-  
-    send( socket, &name_lenght, sizeof( short ), 0);
+        
     send( socket, file, name_lenght, 0 );
+        std::cout << "file " << file << std::endl;
+
     ssize_t l = sendfile( socket, data, NULL, file_stat.st_size );
     
     std::cout << "sendfile() ret. " << l << std::endl;

@@ -2,6 +2,7 @@
 #include <list>
 #include <iterator>
 #include <cstring>
+#include <string>
 #include <csignal>
 
 #include <unistd.h>
@@ -34,8 +35,9 @@ class recipient_t
     
     short port;
     int server_socket;
+    session_t *session_data;
     
-    std::list < session_t* > sessions;
-    std::list < session_t* > :: iterator session;
-    std::list < session_t* > :: iterator tmp_link;
+    std::list < session_t > sessions;
+    std::list < session_t > :: iterator session;
+    std::list < session_t > :: iterator tmp_link;
 };

@@ -3,15 +3,18 @@
 recipient_t::recipient_t()
 {
     port = 127;
+    session_data = new session_t;
 }
 
-recipient_t::~recipient_t(){}
+recipient_t::~recipient_t()
+{
+    delete session_data;
+}
 
 void recipient_t::receive()
 {
     int result, max_d_num;
     server_socket = start();
-    session_t *session_data;
     
     char data[4344]; // segment size x 3 ( L2: 14 byte, L3: 20 byte, L4: 20 + 32 byte => size 1448 )
     char directory[] = "upload/";
@@ -29,8 +32,8 @@ void recipient_t::receive()
         
         for( session = sessions.begin(); session != sessions.end(); session++ )
         {
-            FD_SET(( *session )->session_socket, &sock_d_set );
-            max_d_num = ( *session )->session_socket > max_d_num?( *session )->session_socket:max_d_num;
+            FD_SET( session->session_socket, &sock_d_set );
+            max_d_num = session->session_socket > max_d_num?session->session_socket:max_d_num;
         }
         
         if(( select( max_d_num + 1, &sock_d_set, NULL, NULL, NULL )) < 0 )
@@ -42,7 +45,8 @@ void recipient_t::receive()
         
         for( session = sessions.begin(); session != sessions.end(); session++ )
         {
-            result = recv(( *session )->session_socket, data, sizeof( data ), 0 );
+            memset( data, 0, sizeof( data ));
+            result = recv( session->session_socket, data, sizeof( data ), 0 );
             if( result < 0 )
             {
                 if(( errno != EINTR ) && ( errno != EAGAIN ) && ( errno != EWOULDBLOCK ))
@@ -51,10 +55,9 @@ void recipient_t::receive()
                     tmp_link = session;
                     session++;
                     
-                    shutdown(( *tmp_link )->session_socket, 2 );
-                    close(( *tmp_link )->file );
-                    delete(( *tmp_link )->file_name );
-                    delete(( *tmp_link ));
+                    shutdown( tmp_link->session_socket, 2 );
+                    close( tmp_link->file );
+                    delete( tmp_link->file_name );
                     sessions.erase( tmp_link );
                     continue;
                 }
@@ -62,43 +65,35 @@ void recipient_t::receive()
             else
                 if( result == 0 )
                 {
-                    std::cout << "End Of Data, session " << ( *session )->session_socket << " close" << std::endl;
+                    std::cout << "End Of Data, session " << session->session_socket << " close" << std::endl;
                     tmp_link = session;
                     session++;
                     
-                    shutdown(( *tmp_link )->session_socket, 2 );
-                    close(( *tmp_link )->file );
-                    delete(( *tmp_link )->file_name );
-                    delete(( *tmp_link ));
+                    shutdown( tmp_link->session_socket, 2 );
+                    close( tmp_link->file );
+                    delete( tmp_link->file_name );
                     sessions.erase( tmp_link );
                     continue;
                 }
                 else
                 {
-                    if(( *session )->name_size == 0 )
-                    {
-                        memcpy( &( *session )->name_size, ( void* )data, sizeof( short ));
-                        std::cout << "received 'name size' " << ( *session )->name_size << " byte" << std::endl;
+                    if( session->name_size == 0 )
+                    {                           
+                        session->name_size = strlen( data );
+                        session->file_name = new char[sizeof( directory ) + session->name_size];
+                        
+                        strcpy( session->file_name, directory );
+                        strncat( session->file_name, data, session->name_size );
+                        
+                        std::cout << "new data " << data << std::endl;
+                        std::cout << "new string " << session->file_name << std::endl;
+                        
+                        session->file = open( session->file_name,  O_RDWR | O_CREAT, 00664 );
+                        
                         continue;
                     }
-                    if(( *session )->file_name == NULL )
-                    {
-                        ( *session )->file_name = new char[sizeof( directory ) + ( *session )->name_size];
-                        
-                        memset(( *session )->file_name, 0, sizeof( directory ) + ( *session )->name_size );
-                        strcpy(( *session )->file_name, directory );
-                        strncat(( *session )->file_name, data, ( *session )->name_size );
-                        ( *session )->file_name[sizeof( directory) + ( *session )->name_size] = 0;
-                        
-                        std::cout << "new path " << ( *session )->file_name << std::endl;
-                        
-                        ( *session )->file = open(( *session )->file_name,  O_RDWR | O_CREAT, 00644 );
-                    }
                     else
-                    {
-                        // std::cout << ( *session )->session_socket << " receive " << result << " byte" << std::endl;
-                        write(( *session )->file, data, result );
-                    }
+                        write( session->file, data, result );
                 }
         }
         
@@ -115,10 +110,6 @@ void recipient_t::receive()
                 }
                 else
                 {
-                    session_data = new session_t;
-                    
-                    if( session_data == NULL )
-                        notify( "new()", 0 );
                     if( fcntl( result, F_SETFL, O_NONBLOCK ) < 0 )
                         notify( "fcntl()", errno );
                     
@@ -126,7 +117,7 @@ void recipient_t::receive()
                     session_data->name_size = 0;
                     session_data->file_name = NULL;
                     
-                    sessions.push_back( session_data );
+                    sessions.push_back( *session_data );
                     std::cout << "new connection, socket: " << session_data->session_socket << std::endl;
                 }
             }
@@ -141,9 +132,9 @@ void recipient_t::stop( int code )
 
     for( session = sessions.begin(); session != sessions.end(); session++ )
     {
-        std::cout << "close file " << ( *session )->file_name << std::endl;
-        shutdown(( *session )->session_socket, 2 );
-        close(( *session )->file );
+        std::cout << "close file " << session->file_name << std::endl;
+        shutdown( session->session_socket, 2 );
+        close( session->file );
     }
 
     shutdown( server_socket, 1 );
