@@ -7,7 +7,7 @@ all: $(TARGET)
 
 # -- make obj
 server.o: recipient.c
-	g++ -c -std=c++11 -lpthread -o server.o recipient.c
+	g++ -c -std=c++11 -o server.o recipient.c
 
 client.o: sender.c
 	g++ -c -std=c++11 -o client.o sender.c

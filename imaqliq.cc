@@ -1,5 +1,6 @@
 #include <iostream>
 #include <csignal>
+#include <atomic>
 
 #include <string.h>
 #include <sys/types.h>
@@ -19,6 +20,8 @@ recipient_t server;
 
 void interr_handler( int signo )
 {
+    // std::atomic_signal_fence( std::memory_order_acq_rel );
+    std::atomic_signal_fence( std::memory_order_seq_cst );
     server.stop( signo );
 }
 
@@ -56,7 +59,7 @@ int main( int ac, char **av )
         return 0;
     }
     
-    if( !strcmp( av[1], "server" ))
+    if( strcmp( av[1], "server" ) == 0 )
         server.receive();
     else
         std::cout << "type " << av[0] << " ( server | <file> <server address> )" << std::endl;

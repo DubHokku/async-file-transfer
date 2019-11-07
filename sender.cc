@@ -9,24 +9,25 @@ sender_t::~sender_t(){}
 
 int sender_t::transfer()
 {
-    std::cout << "transfer " << file << " to " << server << std::endl;
-    
     int data = get_file();
     int socket = start();
-    int name_lenght = strlen( file );
+    
+    char* file_name = basename(( char* )file );
+    int name_lenght = strlen( file_name );
+ 
+    std::cout << "transfer " << file_name << " to " << server << std::endl;
     
     struct stat file_stat;
     if( stat( file, &file_stat ) < 0 )
         notify( "stat()", errno );
 
-    std::cout << "size " << file_stat.st_size << " byte" << std::endl;    
-        
-    send( socket, file, name_lenght, 0 );
-        std::cout << "file " << file << std::endl;
+    if( send( socket, file_name, name_lenght, 0 ) < 0 )
+        notify( "send()", errno );
+    if( recv( socket, file_name, name_lenght, 0 ) < 0 )
+        notify( "recv()", errno );
 
-    ssize_t l = sendfile( socket, data, NULL, file_stat.st_size );
-    
-    std::cout << "sendfile() ret. " << l << std::endl;
+    ssize_t ret = sendfile( socket, data, NULL, file_stat.st_size );
+    std::cout << "sendfile() ret. " << ret << std::endl;
     
     close( data );
     shutdown( socket, 1 );

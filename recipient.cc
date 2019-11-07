@@ -16,7 +16,7 @@ void recipient_t::receive()
     int result, max_d_num;
     server_socket = start();
     
-    char data[4344]; // segment size x 3 ( L2: 14 byte, L3: 20 byte, L4: 20 + 32 byte => size 1448 )
+    char data[4344]; // ~ mss x 3
     char directory[] = "upload/";
     
     if( mkdir( directory, 0755 ) < 0 )
@@ -59,6 +59,7 @@ void recipient_t::receive()
                     close( tmp_link->file );
                     delete( tmp_link->file_name );
                     sessions.erase( tmp_link );
+                    
                     continue;
                 }
             }
@@ -73,6 +74,7 @@ void recipient_t::receive()
                     close( tmp_link->file );
                     delete( tmp_link->file_name );
                     sessions.erase( tmp_link );
+                    
                     continue;
                 }
                 else
@@ -86,9 +88,10 @@ void recipient_t::receive()
                         strncat( session->file_name, data, session->name_size );
                         
                         std::cout << "new data " << data << std::endl;
-                        std::cout << "new string " << session->file_name << std::endl;
+                        session->file = open( session->file_name,  O_RDWR | O_CREAT, 00644 );
                         
-                        session->file = open( session->file_name,  O_RDWR | O_CREAT, 00664 );
+                        if( send( session->session_socket, data, session->name_size, 0 ) < 0 )
+                            notify( "send()", errno );
                         
                         continue;
                     }
@@ -129,7 +132,7 @@ void recipient_t::stop( int code )
 {
     std::cout << "server.stop() interrupt: " << code << std::endl;
     std::cout << "server have " << sessions.size() << " connections and opened files" << std::endl;
-
+    
     for( session = sessions.begin(); session != sessions.end(); session++ )
     {
         std::cout << "close file " << session->file_name << std::endl;

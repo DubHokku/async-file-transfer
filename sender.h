@@ -7,6 +7,7 @@
 #include <sys/socket.h>
 #include <arpa/inet.h>
 
+#include <libgen.h>
 #include <sys/stat.h>
 #include <sys/sendfile.h>
 
