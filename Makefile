@@ -7,13 +7,13 @@ all: $(TARGET)
 
 # -- make obj
 server.o: recipient.c
-	g++ -c -std=c++11 -o server.o recipient.c
+	g++ -c -std=c++11 -o server.o recipient.cc
 
 client.o: sender.c
-	g++ -c -std=c++11 -o client.o sender.c
+	g++ -c -std=c++11 -o client.o sender.cc
 
 main.o: $(TARGET).c
-	g++ -c -std=c++11 -o main.o $(TARGET).c
+	g++ -c -std=c++11 -o main.o $(TARGET).cc
 
 # -- make bin
 $(TARGET): server.o client.o main.o
