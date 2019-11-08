@@ -6,13 +6,13 @@ SETPATH = /usr/local/bin
 all: $(TARGET)
 
 # -- make obj
-server.o: recipient.c
+server.o: recipient.cc
 	g++ -c -std=c++11 -o server.o recipient.cc
 
-client.o: sender.c
+client.o: sender.cc
 	g++ -c -std=c++11 -o client.o sender.cc
 
-main.o: $(TARGET).c
+main.o: $(TARGET).cc
 	g++ -c -std=c++11 -o main.o $(TARGET).cc
 
 # -- make bin
