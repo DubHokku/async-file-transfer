@@ -38,6 +38,38 @@ void signal_set()
     std::cout << "proc.ident: " << getpid() << std::endl;
 }
 
+static void mkdaemon()
+{
+    pid_t ps_ident = 0;
+    ps_ident = fork();
+    
+    if( ps_ident < 0 )
+        exit( EXIT_FAILURE );
+
+    if( ps_ident > 0 )
+        exit( EXIT_SUCCESS );
+
+    if( setsid() < 0 )
+        exit( EXIT_FAILURE );
+    
+    signal( SIGCHLD, SIG_IGN );
+    ps_ident = fork();
+
+    if( ps_ident < 0 )
+        exit( EXIT_FAILURE );
+        
+    if( ps_ident > 0 )
+        exit( EXIT_SUCCESS );
+
+    // child_thread++;
+    for( int fd = sysconf( _SC_OPEN_MAX ); fd > 0; fd-- )
+        close( fd );
+
+    stdin = fopen( "/dev/null", "r" );
+    stdout = fopen( "/dev/null", "w+" );
+    stderr = fopen( "/dev/null", "w+" );
+}
+
 int main( int ac, char **av )
 {
     signal_set();
@@ -60,7 +92,10 @@ int main( int ac, char **av )
     }
     
     if( strcmp( av[1], "server" ) == 0 )
+    {    
+        mkdaemon();
         server.receive();
+    }
     else
         std::cout << "type " << av[0] << " ( server | <file> <server address> )" << std::endl;
     
