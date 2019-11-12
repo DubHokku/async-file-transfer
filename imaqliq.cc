@@ -1,6 +1,7 @@
 #include <iostream>
 #include <csignal>
 #include <atomic>
+#include <thread>
 
 #include <string.h>
 #include <sys/types.h>
@@ -45,10 +46,8 @@ static void mkdaemon()
     
     if( ps_ident < 0 )
         exit( EXIT_FAILURE );
-
     if( ps_ident > 0 )
         exit( EXIT_SUCCESS );
-
     if( setsid() < 0 )
         exit( EXIT_FAILURE );
     
@@ -57,7 +56,6 @@ static void mkdaemon()
 
     if( ps_ident < 0 )
         exit( EXIT_FAILURE );
-        
     if( ps_ident > 0 )
         exit( EXIT_SUCCESS );
 
@@ -94,7 +92,8 @@ int main( int ac, char **av )
     if( strcmp( av[1], "server" ) == 0 )
     {    
         mkdaemon();
-        server.receive();
+        std::thread receive( &recipient_t::receive, &server );
+        receive.join();
     }
     else
         std::cout << "type " << av[0] << " ( server | <file> <server address> )" << std::endl;

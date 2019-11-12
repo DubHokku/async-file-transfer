@@ -5,6 +5,11 @@
 #include <string>
 #include <csignal>
 
+#include <thread>
+#include <atomic>
+#include <mutex>
+#include <condition_variable>
+
 #include <unistd.h>
 #include <fcntl.h>
 #include <sys/stat.h>
@@ -33,9 +38,14 @@ class recipient_t
         char* file_name;
     };
     
-    short port;
+    short port, timeout;
     int server_socket;
     session_t *session_data;
+    
+    std::atomic < int > transfer_count;
+    std::atomic < bool > transfer_flag;
+    std::mutex lock;
+    std::condition_variable transfer;
     
     std::list < session_t > sessions;
     std::list < session_t > :: iterator session;

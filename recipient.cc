@@ -3,7 +3,10 @@
 recipient_t::recipient_t()
 {
     port = 127;
+    timeout = 17;
     session_data = new session_t;
+    transfer_count = ATOMIC_VAR_INIT( 0 );
+    transfer_flag = false;
 }
 
 recipient_t::~recipient_t()
@@ -14,7 +17,7 @@ recipient_t::~recipient_t()
 void recipient_t::receive()
 {
     int result, max_d_num;
-    server_socket = start();
+    server_socket = this->start();
     
     char data[4344]; // ~ mss x 3
     char directory[] = "upload/";
@@ -60,6 +63,10 @@ void recipient_t::receive()
                     delete( tmp_link->file_name );
                     sessions.erase( tmp_link );
                     
+                    std::atomic_fetch_sub( &transfer_count, 1 );
+                    transfer_flag = false;
+                    transfer.notify_all();
+                    
                     continue;
                 }
             }
@@ -75,10 +82,15 @@ void recipient_t::receive()
                     delete( tmp_link->file_name );
                     sessions.erase( tmp_link );
                     
+                    std::atomic_fetch_sub( &transfer_count, 1 );
+                    transfer_flag = false;
+                    transfer.notify_all();
+                    
                     continue;
                 }
                 else
                 {
+                    transfer_flag = true;
                     if( session->name_size == 0 )
                     {                           
                         session->name_size = strlen( data );
@@ -119,8 +131,10 @@ void recipient_t::receive()
                     session_data->session_socket = result;
                     session_data->name_size = 0;
                     session_data->file_name = NULL;
-                    
                     sessions.push_back( *session_data );
+                    
+                    std::atomic_fetch_add( &transfer_count, 1 );
+                    
                     std::cout << "new connection, socket: " << session_data->session_socket << std::endl;
                 }
             }
@@ -132,6 +146,18 @@ void recipient_t::stop( int code )
 {
     std::cout << "server.stop() interrupt: " << code << std::endl;
     std::cout << "server have " << sessions.size() << " connections and opened files" << std::endl;
+    std::unique_lock<std::mutex> lck( lock );
+   
+    while( transfer_count )
+    {
+        if( transfer.wait_for( lck, std::chrono::seconds( timeout )) == std::cv_status::timeout )
+        {
+            if( transfer_flag )
+                transfer_flag = false;
+            else
+                transfer_count = ATOMIC_VAR_INIT( 0 );
+        }
+    }
     
     for( session = sessions.begin(); session != sessions.end(); session++ )
     {
