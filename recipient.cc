@@ -5,6 +5,7 @@ recipient_t::recipient_t()
     port = 127;
     timeout = 17;
     session_data = new session_t;
+    accept_enable = 1;
     transfer_count = ATOMIC_VAR_INIT( 0 );
     transfer_flag = false;
 }
@@ -30,7 +31,8 @@ void recipient_t::receive()
     {
         fd_set sock_d_set;
         FD_ZERO( &sock_d_set );
-        FD_SET( server_socket, &sock_d_set );
+        if( accept_enable )
+            FD_SET( server_socket, &sock_d_set );
         max_d_num = server_socket;
         
         for( session = sessions.begin(); session != sessions.end(); session++ )
@@ -146,6 +148,8 @@ void recipient_t::stop( int code )
 {
     std::cout << "server.stop() interrupt: " << code << std::endl;
     std::cout << "server have " << sessions.size() << " connections and opened files" << std::endl;
+    
+    accept_enable = 0;
     std::unique_lock<std::mutex> lck( lock );
    
     while( transfer_count )

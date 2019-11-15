@@ -38,7 +38,7 @@ class recipient_t
         char* file_name;
     };
     
-    short port, timeout;
+    short accept_enable, port, timeout;
     int server_socket;
     session_t *session_data;
     
